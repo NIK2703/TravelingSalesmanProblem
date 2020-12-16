@@ -6,7 +6,6 @@
 #include <limits>
 using namespace std;
 
-//вывод матрицы
 template<class Type>
 void print_matrix(Type** matrix, int size_x, int size_y) {
 	for (int i = 0; i < size_x; i++) {
@@ -20,7 +19,6 @@ void print_matrix(Type** matrix, int size_x, int size_y) {
 	}
 }
 
-//расстояние между точками p1 и p2
 float distance(float* p1, float* p2) {
 	return sqrt(pow(p2[0] - p1[0], 2) + pow(p2[1] - p1[1], 2));
 }
@@ -39,7 +37,6 @@ float** generateFlatGraph(int n) {
 		point_coord[i][1] = (float)(rand() % (divider + 1)) / divider;
 	}
 
-	print_matrix(point_coord, n, 2);
 	//вычисление матрицы смежности графа на основе расстояний между точками
 	float** adj_matrix = new float*[n];
 	for (int i = 0; i < n; i++) {
@@ -58,8 +55,51 @@ float** generateFlatGraph(int n) {
 	return adj_matrix;
 }
 
+template <class Type>
+float min(Type* mas, int size, int* min_pos) {
+	Type min_val = numeric_limits<Type>::max();
+	for (int j = 0; j < size; j++) {
+		if (mas[j] < min_val) {
+			min_val = mas[j];
+			*min_pos = j;
+		}
+	}
+	return min_val;
+}
+
+template <class Type>
+float reduce(Type* mas, int size, Type val) {
+	for (int i = 0; i < size; i++) {
+		mas[i] = mas[i] - val;
+	}
+	return val;
+}
+
+template <class Type>
+float min_column(Type** matrix, int column, int size, int* pos) {
+	Type min_val = numeric_limits<Type>::max();
+	for (int j = 0; j < size; j++) {
+		if (matrix[j][column] < min_val) {
+			min_val = matrix[j][column];
+			*pos = j;
+		}
+	}
+	return min_val;
+}
+
+template <class Type>
+float reduce_column(Type** matrix, int column, int size, Type val) {
+	for (int i = 0; i < size; i++) {
+		matrix[i][column] = matrix[i][column] - val;
+	}
+	return val;
+}
 
 int main()
 {
-	print_matrix<float>(generateFlatGraph(5), 5, 5);
+	const int n = 5;
+	float** matrix = generateFlatGraph(n);
+
+	print_matrix<float>(matrix, n, n);
+
 }
