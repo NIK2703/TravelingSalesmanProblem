@@ -106,8 +106,31 @@ float reduce_matrix(Type** matrix, int size_x, int size_y) {
 	return val;
 }
 
+template <class Type>
+vector<int*> matrix_null_element_positions(Type** matrix, int size) {
+	vector<int*> null_element_positions;
+	for (int i = 0; i < size; i++) {
+		for (int j = 0; j < size; j++) {
+			if (matrix[i][j] == 0) {
+				int* pos = new int[2]{i,j};
+				null_element_positions.push_back(pos);
+			}
+		}
+	}
+	return null_element_positions;
+}
+
 int main()
 {
 	const int n = 5;
 	float** matrix = generateFlatGraph(n);
+	/*
+	reduce_matrix(matrix, n, n);
+	print_matrix(matrix, n, n);
+	vector<int*> null_pos = matrix_null_element_positions(matrix, n);
+	while (!null_pos.empty()) {
+		cout << null_pos.back()[0] << "\t" << null_pos.back()[1] << "\n";
+		null_pos.pop_back();
+	}
+	*/
 }
