@@ -4,6 +4,7 @@
 #include <iostream>
 #include <math.h>
 #include <limits>
+#include <vector>
 using namespace std;
 
 template<class Type>
@@ -56,12 +57,11 @@ float** generateFlatGraph(int n) {
 }
 
 template <class Type>
-float min(Type* mas, int size, int* min_pos) {
+float min(Type* mas, int size) {
 	Type min_val = numeric_limits<Type>::max();
 	for (int j = 0; j < size; j++) {
 		if (mas[j] < min_val) {
 			min_val = mas[j];
-			*min_pos = j;
 		}
 	}
 	return min_val;
@@ -76,12 +76,11 @@ float reduce(Type* mas, int size, Type val) {
 }
 
 template <class Type>
-float min_column(Type** matrix, int column, int size, int* pos) {
+float min_column(Type** matrix, int column, int size) {
 	Type min_val = numeric_limits<Type>::max();
 	for (int j = 0; j < size; j++) {
 		if (matrix[j][column] < min_val) {
 			min_val = matrix[j][column];
-			*pos = j;
 		}
 	}
 	return min_val;
@@ -95,11 +94,20 @@ float reduce_column(Type** matrix, int column, int size, Type val) {
 	return val;
 }
 
+template <class Type>
+float reduce_matrix(Type** matrix, int size_x, int size_y) {
+	Type val = 0;
+	for (int i = 0; i < size_x; i++) {
+		val += reduce(matrix[i], size_x, min(matrix[i], size_x));
+	}
+	for (int i = 0; i < size_y; i++) {
+		val += reduce_column(matrix, i, size_y, min_column(matrix, i, size_y));
+	}
+	return val;
+}
+
 int main()
 {
 	const int n = 5;
 	float** matrix = generateFlatGraph(n);
-
-	print_matrix<float>(matrix, n, n);
-
 }
