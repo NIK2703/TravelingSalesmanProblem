@@ -5,8 +5,9 @@
 #include <type_traits>
 #include <fstream>
 #include <string>
-#include <math.h>
 using namespace std;
+
+const float accuracy = 0.0001;
 
 int transformIndex(int source_index, vector<int> index_list);
 
@@ -102,8 +103,7 @@ float distance(float* p1, float* p2) {
 //генерация матрицы смежности графа на основе расстояний между n случайно сгенерированнными  в единичном квадрате  точками
 float** generateFlatGraph(int n) {
 	//параметры генератора случайных чисел
-	const float accuracy = 0.01;
-	const int divider = (int)1 / accuracy;
+	const int divider = (int)1 / sqrt(accuracy);
 
 	//генерация координат точек
 	float** point_coord = new float* [n];
@@ -208,15 +208,13 @@ template <class Type>
 Type max_zero_degree_null(numbered_matrix<Type> n_matrix, int* pos) {
 	Type max = numeric_limits<Type>::min();
 	vector<int*> null_positions = matrix_null_element_positions(n_matrix.matrix, n_matrix.out_indexes.size());
-	while (!null_positions.empty()) {
-		Type val = zero_degree(n_matrix.matrix, null_positions.back(), n_matrix.out_indexes.size());
+	for (int i = 0; i < null_positions.size(); i++){
+		Type val = zero_degree(n_matrix.matrix, null_positions[i], n_matrix.out_indexes.size());
 		if (val > max) {
 			max = val;
-			pos[0] = n_matrix.out_indexes[null_positions.back()[0]];
-			pos[1] = n_matrix.in_indexes[null_positions.back()[1]];
-			null_positions.back();
+			pos[0] = n_matrix.out_indexes[null_positions[i][0]];
+			pos[1] = n_matrix.in_indexes[null_positions[i][1]];
 		}
-		null_positions.pop_back();
 	}
 	return max;
 }
@@ -302,61 +300,90 @@ struct binary_tree_node {
 	binary_tree_node* parent;
 };
 
-int* get_hameltonian_cycle(vector<int*> edges, int n) {
-	vector<int> path;
-	
-	int v_number_sum = n * (n - 1) / 2;
-
-	for (int i = 0; i < edges.size(); i++) {
-		int start_vertex = edges[i][0];
-		int next_vertex = start_vertex;
-		int sum = next_vertex;
-
-		path.push_back(next_vertex);
-
-		do {
-			for (int j = 0; j < edges.size(); j++) {
-				if (edges[j][0] == next_vertex) {
-					next_vertex = edges[j][1];
-					sum += next_vertex;
-					break;
-				};
-			}
-			path.push_back(next_vertex);
-		} while (next_vertex != start_vertex);
-
-		cout << endl;
-		for (int j = 0; j < path.size(); j++) {
-			cout << path[j] << ' ';
-		}
-		cout << endl;
-		
-		if (path.size() == n + 1) {
-			int* path_mas = new int[n + 1];
-			for (int j = 0; j < path.size(); j++) {
-				path_mas[j] = path[j];
-			}
-			return path_mas;
-		}
-		path.clear();
+template <class Type>
+string string_node_state(binary_tree_node<node_alg_little<Type>>* node) {
+	string str = "";
+	if (node->left != NULL) {
+		str += "[ " + string_node_state(node->left) + " ] <";
 	}
-	return NULL;
+	str += " ";
+	if (node->parent == NULL) {
+		str += "* ";
+	}
+	if (node->content.edge != NULL) {
+		str += to_string(node->content.edge[0]) + "-" + to_string(node->content.edge[1]) + " ";
+	}
+	str += "(" + to_string(node->content.val) + ")";
+	if (node->parent == NULL) {
+		str += " *";
+	}
+	if (node->right != NULL) {
+		str += " > [ " + string_node_state(node->right) + " ]";
+	}
+	return str;
+}
+
+template <class Type>
+vector<int*> get_edges(binary_tree_node<node_alg_little<Type>>* node) {
+	vector<int*> edges;
+	binary_tree_node<node_alg_little<Type>>* curr_node = node;
+	while (curr_node->parent != NULL) {
+		if (curr_node->parent->right != curr_node) {
+			edges.push_back(curr_node->content.edge);
+		}
+		curr_node = curr_node->parent;
+	}
+	return edges;
+}
+
+vector<int> get_cycle(vector<int*> edges) {
+	vector<int> path;
+	int start_vertex = edges[0][0];
+	int next_vertex = edges[0][1];
+	path.push_back(start_vertex);
+	while (next_vertex != start_vertex && !(path.size() > edges.size() + 2)) {
+		for (int i = 0; i < edges.size(); i++) {
+			if (edges[i][0] == next_vertex) {
+				path.push_back(next_vertex);
+				next_vertex = edges[i][1];
+				break;
+			};
+			if (i == edges.size() - 1) {
+				vector<int> no_cycle;
+				no_cycle.push_back(-1);
+				return no_cycle;
+			}
+		}
+	}
+	path.push_back(next_vertex);
+
+	/*cout << "found cycle: ";
+	for (int i = 0; i < path.size(); i++) {
+		cout << path[i] << " ";
+	}
+	cout << endl;*/
+
+	return path;
 }
 
 template <class Type>
 binary_tree_node<node_alg_little<Type>>* alg_little_step(binary_tree_node<node_alg_little<Type>>* node) {
 	int* edge = new int[2];
 	max_zero_degree_null(node->content.adj_matrix, edge);
+	//cout << edge[0] << " " << edge[1] << " ";
 
 	binary_tree_node<node_alg_little<Type>> left_node;
 	left_node.content.adj_matrix = remove_edge(clone_numbered_matrix(node->content.adj_matrix), edge);
 	left_node.content.edge = edge;
 	left_node.content.val = node->content.val + reduce_matrix(left_node.content.adj_matrix.matrix,
 		left_node.content.adj_matrix.out_indexes.size(), left_node.content.adj_matrix.in_indexes.size());
+	//cout << "in: " << left_node.content.val << " ";
+	left_node.left = NULL;
+	left_node.right = NULL;
 	left_node.parent = node;
 	node->left = &left_node;
 
-	/*cout << left_node.content.edge[0] << ' ' << left_node.content.edge[1] << endl;
+	/*cout << "+ " << left_node.content.edge[0] << ' ' << left_node.content.edge[1] << endl;
 	cout << left_node.content.val << endl;
 	print_numbered_matrix(left_node.content.adj_matrix);
 	cout << endl << endl;*/
@@ -368,10 +395,13 @@ binary_tree_node<node_alg_little<Type>>* alg_little_step(binary_tree_node<node_a
 	right_node.content.edge = edge;
 	right_node.content.val = node->content.val + reduce_matrix(right_node.content.adj_matrix.matrix,
 		right_node.content.adj_matrix.out_indexes.size(), right_node.content.adj_matrix.in_indexes.size());
+	//cout << "ex: " << right_node.content.val << endl;
+	right_node.left = NULL;
+	right_node.right = NULL;
 	right_node.parent = node;
 	node->right = &right_node;
 
-	/*cout << right_node.content.edge[0] << ' ' << right_node.content.edge[1] << endl;
+	/*cout << "- " << right_node.content.edge[0] << ' ' << right_node.content.edge[1] << endl;
 	cout << right_node.content.val << endl;
 	print_numbered_matrix(right_node.content.adj_matrix);
 	cout << endl << endl;*/
@@ -383,12 +413,13 @@ binary_tree_node<node_alg_little<Type>>* alg_little_step(binary_tree_node<node_a
 }
 
 template <class Type>
-int* traveling_saleman_problem_solution_alg_little(numbered_matrix<Type> adj_matrix) {
+vector<int> traveling_saleman_problem_solution_alg_little(numbered_matrix<Type> adj_matrix) {
 	vector<binary_tree_node<node_alg_little<Type>>*> leaf_list;
 	binary_tree_node<node_alg_little<Type>> root;
 	root.content.adj_matrix = clone_numbered_matrix(adj_matrix);
 	root.content.val = reduce_matrix(root.content.adj_matrix.matrix, root.content.adj_matrix.out_indexes.size(),
 		root.content.adj_matrix.in_indexes.size());
+	root.content.edge = NULL;
 	root.parent = NULL;
 
 	Type min_val = numeric_limits<Type>::max();
@@ -397,6 +428,7 @@ int* traveling_saleman_problem_solution_alg_little(numbered_matrix<Type> adj_mat
 		binary_tree_node<node_alg_little<Type>>* nodes = alg_little_step(next_node);
 		next_node->left = &nodes[0];
 		next_node->right = &nodes[1];
+		//cout << string_node_state(&root) << endl;
 		leaf_list.push_back(&nodes[0]);
 		leaf_list.push_back(&nodes[1]);
 		int min_i = 0;
@@ -407,65 +439,90 @@ int* traveling_saleman_problem_solution_alg_little(numbered_matrix<Type> adj_mat
 				min_i = i;
 			}
 		}
+		/*if (next_node->parent->left == next_node) {
+			cout << "selected in: ";
+		}
+		else {
+			cout << "selected ex: ";
+		}
+		cout << next_node->content.edge[0] << " " << next_node->content.edge[1] << " val: " << next_node->content.val << endl;*/
+		//исключение рёбер которые могут состовлять подциклы с текщими рёбрами
+		if (next_node->parent->left == next_node) {
+			vector<int*> edges = get_edges(next_node);
+			for (int i = 0; i < edges.size(); i++) {
+				for (int j = 0; j < edges.size(); j++) {
+					if (i != j) {
+						vector<int*> edges_cycle(edges);
+						int* test_edge = new int[2];
+						test_edge[0] = edges[i][1];
+						test_edge[1] = edges[j][0];
+						edges_cycle.push_back(test_edge);
+						vector<int> test_result = get_cycle(edges_cycle);
+						if (test_result[0] != -1 && test_result.size() != root.content.adj_matrix.out_indexes.size() + 1) {
+							//cout << "blocked:" << test_edge[0] << " " << test_edge[1] << endl;
+							if (transformIndex(edges[i][1], next_node->content.adj_matrix.out_indexes) != -1 &&
+								transformIndex(edges[j][0], next_node->content.adj_matrix.in_indexes) != -1) {
+								next_node->content.adj_matrix.matrix[transformIndex(edges[i][1], next_node->content.adj_matrix.out_indexes)]
+									[transformIndex(edges[j][0], next_node->content.adj_matrix.in_indexes)] = numeric_limits<Type>::max();
+							}
+						}
+					}
+				}
+			}
+		}
 		leaf_list.erase(leaf_list.begin() + min_i);
 		min_val = numeric_limits<Type>::max();
 	}
-	vector<int*> edges;
+
+	vector<int*> edges = get_edges(next_node);
 	int* edge = new int[2];
 	edge[0] = next_node->content.adj_matrix.out_indexes[0];
 	edge[1] = next_node->content.adj_matrix.in_indexes[0];
 	edges.push_back(edge);
-	while (next_node->parent != NULL) {
-		if (next_node->parent->right != next_node) {
-			edges.push_back(next_node->content.edge);
-		}
-		next_node = next_node->parent;
-	}
-
-	for (int i = 0; i < edges.size(); i++) {
+	
+	/*for (int i = 0; i < edges.size(); i++) {
 		cout << edges[i][0] << edges[i][1] << endl;
-	}
-
-	/*vector<int> path;
-	int next_vertex = 0;
-	path.push_back(next_vertex);
-	while (edges.empty() != true) {
-		for (int i = 0; i < edges.size(); i++) {
-			if (edges[i][0] == next_vertex) {
-				next_vertex = edges[i][1];
-				edges.erase(edges.begin() + i);
-				break;
-			};
-		}
-		path.push_back(next_vertex);
 	}*/
 
-	int* path = get_hameltonian_cycle(edges, adj_matrix.out_indexes.size());
-	
-	return path;
+	return get_cycle(edges);
+}
+
+template <class Type>
+Type path_len(vector<int> path, Type** matrix) {
+	Type sum = 0;
+	for (int i = 0; i < path.size() - 1; i++) {
+		sum += matrix[path[i]][path[i + 1]];
+	}
+	return sum;
 }
 
 int main()
 {
 
 	//матрица из файла input.txt
-	/*numbered_matrix<int> n_matrix;
-	n_matrix.matrix = matrix_from_file<int>("input.txt");*/
+	const int n = 5;
+	numbered_matrix<int> n_matrix;
+	n_matrix.matrix = matrix_from_file<int>("input2.txt");
 
 	//случайно сгенерированная матрица
-	const int n = 8;
+	/*const int n = 20;
 	numbered_matrix<float> n_matrix;
-	srand(9);
-	n_matrix.matrix = generateFlatGraph(n);
+	srand(0);
+	n_matrix.matrix = generateFlatGraph(n);*/
 
 	n_matrix.out_indexes = generateIndexList(n);
 	n_matrix.in_indexes = generateIndexList(n);
 
 	print_numbered_matrix(n_matrix);
 
-	int* path = traveling_saleman_problem_solution_alg_little(n_matrix);
-	for (int i = 0; i < n + 1; i++) {
+	vector<int> path = traveling_saleman_problem_solution_alg_little(n_matrix);
+
+	float val = path_len(path, n_matrix.matrix);
+
+	for (int i = 0; i < path.size(); i++) {
 		cout << path[i] << ' ';
 	}
+	cout << endl;
+	cout << "val: " << val;
 }
 
