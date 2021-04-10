@@ -336,18 +336,24 @@ vector<int*> get_edges(binary_tree_node<node_alg_little<Type>>* node) {
 	return edges;
 }
 
-vector<int> get_cycle(vector<int*> edges) {
+vector<int> get_cycle(vector<int*> edges, bool oriented = true) {
 	vector<int> path;
 	int start_vertex = edges[0][0];
 	int next_vertex = edges[0][1];
 	path.push_back(start_vertex);
 	while (next_vertex != start_vertex && !(path.size() > edges.size() + 2)) {
 		for (int i = 0; i < edges.size(); i++) {
-			if (edges[i][0] == next_vertex) {
+			if (edges[i][0] == next_vertex && edges[i][1] != path.back()) {
 				path.push_back(next_vertex);
 				next_vertex = edges[i][1];
 				break;
-			};
+			} else if (!oriented) {
+				if (edges[i][1] == next_vertex && edges[i][0] != path.back()) {
+					path.push_back(next_vertex);
+					next_vertex = edges[i][0];
+					break;
+				}
+			}	
 			if (i == edges.size() - 1) {
 				vector<int> no_cycle;
 				no_cycle.push_back(-1);
@@ -357,11 +363,11 @@ vector<int> get_cycle(vector<int*> edges) {
 	}
 	path.push_back(next_vertex);
 
-	/*cout << "found cycle: ";
+	cout << "found cycle: ";
 	for (int i = 0; i < path.size(); i++) {
 		cout << path[i] << " ";
 	}
-	cout << endl;*/
+	cout << endl;
 
 	return path;
 }
@@ -496,13 +502,22 @@ Type path_len(vector<int> path, Type** matrix) {
 	return sum;
 }
 
+//приближённый алгоритм на основе остовного дерева
+template <class Type>
+vector<int*> get_graph_skeleton()
+
+template <class Type>
+vector<int> traveling_saleman_problem_solution_approximate_alg(numbered_matrix<Type> adj_matrix) {
+
+}
+
 int main()
 {
 
 	//матрица из файла input.txt
-	const int n = 5;
+	/*const int n = 5;
 	numbered_matrix<int> n_matrix;
-	n_matrix.matrix = matrix_from_file<int>("input2.txt");
+	n_matrix.matrix = matrix_from_file<int>("input2.txt");*/
 
 	//случайно сгенерированная матрица
 	/*const int n = 20;
@@ -510,7 +525,7 @@ int main()
 	srand(0);
 	n_matrix.matrix = generateFlatGraph(n);*/
 
-	n_matrix.out_indexes = generateIndexList(n);
+	/*n_matrix.out_indexes = generateIndexList(n);
 	n_matrix.in_indexes = generateIndexList(n);
 
 	print_numbered_matrix(n_matrix);
@@ -523,6 +538,25 @@ int main()
 		cout << path[i] << ' ';
 	}
 	cout << endl;
-	cout << "val: " << val;
+	cout << "val: " << val;*/
+
+	//тестирование get_cycle
+	/*vector<int*> test_cycle_edges;
+
+	int* test_edges_1 = new int[2] { 1, 0 };
+	int* test_edges_2 = new int[2] { 1, 2 };
+	int* test_edges_3 = new int[2] { 0, 2 };
+
+
+	test_cycle_edges.push_back(test_edges_1);
+	test_cycle_edges.push_back(test_edges_2);
+	test_cycle_edges.push_back(test_edges_3);
+
+	vector<int> cycle_path = get_cycle(test_cycle_edges, false);
+
+	for (int i = 0; i < cycle_path.size(); i++) {
+		cout << cycle_path[i] << " ";
+	}
+	cout << endl;*/
 }
 
