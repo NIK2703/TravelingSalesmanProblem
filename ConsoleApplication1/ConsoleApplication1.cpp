@@ -10,6 +10,8 @@ using namespace std;
 const float accuracy = 0.0001;
 
 int transformIndex(int source_index, vector<int> index_list);
+vector<int> get_path(vector<int*> edges, int out, int in, bool oriented);
+vector<int> get_path(vector<int*> edges, int out, int in, vector<int> path, bool oriented);
 
 template<class Type>
 void print_matrix(Type** matrix, int size_x, int size_y) {
@@ -502,10 +504,153 @@ Type path_len(vector<int> path, Type** matrix) {
 	return sum;
 }
 
-//приближённый алгоритм на основе остовного дерева
-template <class Type>
-vector<int*> get_graph_skeleton()
+vector<int> get_path(vector<int*> edges, int out, int in, bool oriented = true) {
+	return get_path(edges, out, in, vector<int>(), oriented);
+}
 
+vector<int> get_path(vector<int*> edges, int out, int in, vector<int> path, bool oriented) {
+	for (int i = 0; i < edges.size(); i++) {
+		if (edges[i][0] == out) {
+			vector<int> new_path(path);
+			new_path.push_back(edges[i][0]);
+
+			if (edges[i][1] == in) {
+				new_path.push_back(edges[i][1]);
+				return new_path;
+			}
+			for (int j = 0; j < path.size(); j++) {
+				if (edges[i][1] == path[j]) {
+					vector<int> no_path;
+					return no_path;
+				}
+			}
+			vector<int*> restricted_edges = vector<int*>(edges);
+			restricted_edges.erase(restricted_edges.begin() + i);
+			vector<int> test_path = get_path(restricted_edges, edges[i][1], in, new_path, oriented);
+			if (test_path.size() > 0) {
+				return test_path;
+			}
+		}
+		else if (!oriented) {
+			if (edges[i][1] == out) {
+				vector<int> new_path(path);
+				new_path.push_back(edges[i][1]);
+
+				if (edges[i][0] == in) {
+					new_path.push_back(edges[i][0]);
+					return new_path;
+				}
+				for (int j = 0; j < path.size(); j++) {
+					if (edges[i][0] == path[j]) {
+						vector<int> no_path;
+						return no_path;
+					}
+				}
+				vector<int*> restricted_edges = vector<int*>(edges);
+				restricted_edges.erase(restricted_edges.begin() + i);
+				vector<int> test_path = get_path(restricted_edges, edges[i][0], in, new_path, oriented);
+				if (test_path.size() > 0) {
+					return test_path;
+				}
+			}
+		}
+	}
+	vector<int> no_path;
+	return no_path;
+}
+
+bool graph_connectivity_check(vector<int*> edges, int n, bool oriented = true) {
+	for (int i = 0; i < n - 1; i++) {
+		for (int j = i + 1; j < n; j++) {
+			if (get_path(edges, i, j, false).size() == 0) {
+				return false;
+			};
+		}
+	}
+	return true;
+}
+
+//построение минимального остовного дерева с помощью алгоритма Крускала
+template <class T>
+vector<int*> get_graph_skeleton(T** matrix, int n) {
+	//Трансформация матрицы смежности в массивы весов и соответсвующих им индексов рёбер
+	int line_matrix_size = (n * (n - 1)) / 2;
+	T* line_matrix = new T[line_matrix_size];
+	int** edges = new int* [line_matrix_size];
+	int k = 0;
+	for (int i = 0; i < n - 1; i++) {
+		for (int j = i + 1; j < n; j++) {
+			edges[k] = new int[2];
+			edges[k][0] = i;
+			edges[k][1] = j;
+			line_matrix[k] = matrix[i][j];
+			k++;
+		}
+	}
+
+	//Сортировка рёбер по возрастанию весов
+	for (int i = 0; i < line_matrix_size - 1; i++) {
+		for (int j = i + 1; j < line_matrix_size; j++) {
+			if (line_matrix[i] > line_matrix[j]) {
+				T t = line_matrix[i];
+				line_matrix[i] = line_matrix[j];
+				line_matrix[j] = t;
+				
+				int* e = edges[j];
+				edges[j] = edges[i];
+				edges[i] = e;
+			}
+		}
+	}
+
+	for (int i = 0; i < line_matrix_size; i++) {
+		cout << line_matrix[i] << " ";
+	}
+	cout << endl;
+	for (int i = 0; i < line_matrix_size; i++) {
+		cout << edges[i][0] << " ";
+	}
+	cout << endl;
+	for (int i = 0; i < line_matrix_size; i++) {
+		cout << edges[i][1] << " ";
+	}
+	cout << endl;
+
+	vector<int*> skeleton_edges;
+	for (int i = 0; i < line_matrix_size; i++) {
+		vector<int*> test_edges = vector<int*>(skeleton_edges);
+		test_edges.push_back(edges[i]);
+		//если добавление ребра не сриводит к появлению цикла
+		if (get_path(test_edges, edges[i][0], edges[i][0], false).size() == 0) {
+			skeleton_edges.push_back(edges[i]);
+
+			cout << i << endl;
+			for (int j = 0; j < skeleton_edges.size(); j++) {
+				cout << skeleton_edges[j][0] << " ";
+			}
+			cout << endl;
+			for (int j = 0; j < skeleton_edges.size(); j++) {
+				cout << skeleton_edges[j][1] << " ";
+			}
+			cout << endl << endl;
+		}
+		if (graph_connectivity_check(skeleton_edges, n, false)) {
+			break;
+		}
+	}
+	
+	if (graph_connectivity_check(skeleton_edges, n) != true) {
+		vector<int*> no_skeleton;
+		int* null_edge = new int[2];
+		null_edge[0] = -1;
+		null_edge[1] = -1;
+		no_skeleton.push_back(null_edge);
+		return no_skeleton;
+	}
+	return skeleton_edges;
+}
+
+//приближённый алгоритм на основе остовного дерева
 template <class Type>
 vector<int> traveling_saleman_problem_solution_approximate_alg(numbered_matrix<Type> adj_matrix) {
 
@@ -515,9 +660,11 @@ int main()
 {
 
 	//матрица из файла input.txt
-	/*const int n = 5;
+	const int n = 5;
 	numbered_matrix<int> n_matrix;
-	n_matrix.matrix = matrix_from_file<int>("input2.txt");*/
+	n_matrix.matrix = matrix_from_file<int>("C:\\Users\\Никита\\source\\repos\\NIK2703\\TravelingSalesmanProblem\\ConsoleApplication1\\input2.txt");
+	print_matrix(n_matrix.matrix, n, n);
+
 
 	//случайно сгенерированная матрица
 	/*const int n = 20;
@@ -558,5 +705,21 @@ int main()
 		cout << cycle_path[i] << " ";
 	}
 	cout << endl;*/
+
+	get_graph_skeleton(n_matrix.matrix, n);
+	/*vector<int*> test_graph;
+	test_graph.push_back(new int[2]{ 1, 0 });
+	test_graph.push_back(new int[2]{ 1, 2 });
+	test_graph.push_back(new int[2]{ 3, 2 });
+	test_graph.push_back(new int[2]{ 3, 1 });
+
+	vector<int> p = get_path(test_graph, 3, 0, false);
+
+	for (int i = 0; i < p.size(); i++) {
+		cout << p[i] << " ";
+	}
+	cout << endl;*/
+
+	system("pause");
 }
 
