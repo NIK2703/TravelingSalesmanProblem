@@ -5,6 +5,7 @@
 #include <type_traits>
 #include <fstream>
 #include <string>
+#include <time.h> 
 using namespace std;
 
 const float accuracy = 0.0001;
@@ -365,11 +366,11 @@ vector<int> get_cycle(vector<int*> edges, bool oriented = true) {
 	}
 	path.push_back(next_vertex);
 
-	cout << "found cycle: ";
+	/*cout << "found cycle: ";
 	for (int i = 0; i < path.size(); i++) {
 		cout << path[i] << " ";
 	}
-	cout << endl;
+	cout << endl;*/
 
 	return path;
 }
@@ -504,6 +505,15 @@ Type path_len(vector<int> path, Type** matrix) {
 	return sum;
 }
 
+template <class Type>
+Type path_len(vector<int*> edges, Type** matrix) {
+	Type sum = 0;
+	for (int i = 0; i < edges.size(); i++) {
+		sum += matrix[edges[i][0]][edges[i][1]];
+	}
+	return sum;
+}
+
 vector<int> get_path(vector<int*> edges, int out, int in, bool oriented = true) {
 	return get_path(edges, out, in, vector<int>(), oriented);
 }
@@ -572,7 +582,7 @@ bool graph_connectivity_check(vector<int*> edges, int n, bool oriented = true) {
 
 //построение минимального остовного дерева с помощью алгоритма Крускала
 template <class T>
-vector<int*> get_graph_skeleton(T** matrix, int n) {
+vector<int*> get_graph_spanning_tree(T** matrix, int n) {
 	//Трансформация матрицы смежности в массивы весов и соответсвующих им индексов рёбер
 	int line_matrix_size = (n * (n - 1)) / 2;
 	T* line_matrix = new T[line_matrix_size];
@@ -603,7 +613,7 @@ vector<int*> get_graph_skeleton(T** matrix, int n) {
 		}
 	}
 
-	for (int i = 0; i < line_matrix_size; i++) {
+	/*for (int i = 0; i < line_matrix_size; i++) {
 		cout << line_matrix[i] << " ";
 	}
 	cout << endl;
@@ -614,111 +624,208 @@ vector<int*> get_graph_skeleton(T** matrix, int n) {
 	for (int i = 0; i < line_matrix_size; i++) {
 		cout << edges[i][1] << " ";
 	}
-	cout << endl;
+	cout << endl;*/
 
-	vector<int*> skeleton_edges;
+	vector<int*> spanning_tree_edges;
 	for (int i = 0; i < line_matrix_size; i++) {
-		vector<int*> test_edges = vector<int*>(skeleton_edges);
+		vector<int*> test_edges = vector<int*>(spanning_tree_edges);
 		test_edges.push_back(edges[i]);
 		//если добавление ребра не сриводит к появлению цикла
 		if (get_path(test_edges, edges[i][0], edges[i][0], false).size() == 0) {
-			skeleton_edges.push_back(edges[i]);
+			spanning_tree_edges.push_back(edges[i]);
 
-			cout << i << endl;
-			for (int j = 0; j < skeleton_edges.size(); j++) {
-				cout << skeleton_edges[j][0] << " ";
+			/*cout << i << endl;
+			for (int j = 0; j < spanning_tree_edges.size(); j++) {
+				cout << spanning_tree_edges[j][0] << " ";
 			}
 			cout << endl;
-			for (int j = 0; j < skeleton_edges.size(); j++) {
-				cout << skeleton_edges[j][1] << " ";
+			for (int j = 0; j < spanning_tree_edges.size(); j++) {
+				cout << spanning_tree_edges[j][1] << " ";
 			}
-			cout << endl << endl;
+			cout << endl << endl;*/
 		}
-		if (graph_connectivity_check(skeleton_edges, n, false)) {
+		if (graph_connectivity_check(spanning_tree_edges, n, false)) {
 			break;
 		}
 	}
 	
-	if (graph_connectivity_check(skeleton_edges, n) != true) {
-		vector<int*> no_skeleton;
+	if (graph_connectivity_check(spanning_tree_edges, n) != true) {
+		vector<int*> no_spanning_tree;
 		int* null_edge = new int[2];
 		null_edge[0] = -1;
 		null_edge[1] = -1;
-		no_skeleton.push_back(null_edge);
-		return no_skeleton;
+		no_spanning_tree.push_back(null_edge);
+		return no_spanning_tree;
 	}
-	return skeleton_edges;
+	return spanning_tree_edges;
+}
+
+void tree_traversal(vector<int*> tree, int vertex, vector<int>* path) {
+	path->push_back(vertex);
+	for (int i = 0; i < tree.size(); i++) {
+		if (tree[i][0] == vertex){
+			vector<int*> restricted_tree = vector<int*>(tree);
+			restricted_tree.erase(restricted_tree.begin() + i);
+			tree_traversal(restricted_tree, tree[i][1], path);
+			path->push_back(vertex);
+		}
+		else if (tree[i][1] == vertex) {
+			vector<int*> restricted_tree = vector<int*>(tree);
+			restricted_tree.erase(restricted_tree.begin() + i);
+			tree_traversal(restricted_tree, tree[i][0], path);
+			path->push_back(vertex);
+		}
+	}
 }
 
 //приближённый алгоритм на основе остовного дерева
-template <class Type>
-vector<int> traveling_saleman_problem_solution_approximate_alg(numbered_matrix<Type> adj_matrix) {
+vector<int> traveling_saleman_problem_solution_approximate_alg(vector<int*> minimal_spanning_tree, int n) {
+	vector<int> traversal_path;
+	tree_traversal(minimal_spanning_tree, 0, &traversal_path);
+	bool* contain_vertex = new bool[n];
+	for (int i = 0; i < n; i++) {
+		contain_vertex[i] = false;
+	}
+	vector<int> traveling_saleman_path;
+	for (int i = 0; i < traversal_path.size(); i++) {
+		if (!contain_vertex[traversal_path[i]]) {
+			traveling_saleman_path.push_back(traversal_path[i]);
+			contain_vertex[traversal_path[i]] = true;
+		}
+	}
+	traveling_saleman_path.push_back(0);
+	
+	return traveling_saleman_path;
+}
+
+void branch_and_bound_method_test(int n) {
+	vector<int> path;
+	double seconds;
+	clock_t start, end;
+	numbered_matrix<float> n_matrix;
+	cout << n << " vertexes" << endl;
+	n_matrix.matrix = generateFlatGraph(n);
+	n_matrix.out_indexes = generateIndexList(n);
+	n_matrix.in_indexes = generateIndexList(n);
+	start = clock();
+	path = traveling_saleman_problem_solution_alg_little(n_matrix);
+	end = clock();
+	seconds = (double)(end - start) / CLOCKS_PER_SEC;
+	cout << "Time: " << seconds << " seconds" << endl;
+	cout << "Route weight: " << path_len(path, n_matrix.matrix) << endl;
+	cout << endl;
+}
+
+void  minimum_spanning_tree_method_test(int n) {
+	vector<int> path;
+	double seconds;
+	clock_t start, end;
+	float** matrix;
+	vector<int*> minimal_spanning_tree;
+	cout << n << " vertexes" << endl;
+	matrix = generateFlatGraph(n);
+	start = clock();
+	minimal_spanning_tree = get_graph_spanning_tree(matrix, n);
+	path = traveling_saleman_problem_solution_approximate_alg(minimal_spanning_tree, n);
+	end = clock();
+	seconds = (double)(end - start) / CLOCKS_PER_SEC;
+	cout << "Time: " << seconds << " seconds" << endl;
+	cout << "Spanning tree weight: " << path_len(minimal_spanning_tree, matrix) << endl;
+	cout << "Route weight: " << path_len(path, matrix) << endl;
+	cout << endl;
+}
+
+void traveling_saleman_problem_algs_test(int test_number, int vertexes_number) {
+	clock_t start, end, accuracy_method_time = 0, approximate_method_time = 0;
+	float acc_method_weight_sum = 0, aprx_method_weight_sum = 0;
+
+	numbered_matrix<float> n_matrix;
+	n_matrix.out_indexes = generateIndexList(vertexes_number);
+	n_matrix.in_indexes = generateIndexList(vertexes_number);
+	vector<int> path;
+	vector<int*> minimal_spanning_tree;
+
+	for (int i = 0; i < test_number; i++) {
+		srand(i);
+		n_matrix.matrix = generateFlatGraph(vertexes_number);
+
+		start = clock();
+		path = traveling_saleman_problem_solution_alg_little(n_matrix);
+		end = clock();
+		accuracy_method_time += end - start;
+		acc_method_weight_sum += path_len(path, n_matrix.matrix);
+
+		start = clock();
+		minimal_spanning_tree = get_graph_spanning_tree(n_matrix.matrix, vertexes_number);
+		path = traveling_saleman_problem_solution_approximate_alg(minimal_spanning_tree, vertexes_number);
+		end = clock();
+		approximate_method_time += end - start;
+		aprx_method_weight_sum += path_len(path, n_matrix.matrix);
+	}
+	cout << "Average for " << test_number << " test on " << vertexes_number << "-vertexes graphs:" <<  endl;
+	cout << "Accuracy method time: " << (double) accuracy_method_time / CLOCKS_PER_SEC << " seconds" << endl;
+	cout << "Approximate method time: " << (double)approximate_method_time / CLOCKS_PER_SEC << " seconds" << endl;
+	cout << "Approximate method accuracy: " << (double)acc_method_weight_sum / aprx_method_weight_sum << endl;
 
 }
 
 int main()
 {
 
-	//матрица из файла input.txt
-	const int n = 5;
+	//матрица из файла input.txt - несимметричная (только для метода ветвей и границ)
+	/*const int n = 5;
 	numbered_matrix<int> n_matrix;
-	n_matrix.matrix = matrix_from_file<int>("C:\\Users\\Никита\\source\\repos\\NIK2703\\TravelingSalesmanProblem\\ConsoleApplication1\\input2.txt");
-	print_matrix(n_matrix.matrix, n, n);
-
+	n_matrix.matrix = matrix_from_file<int>("input.txt");
+	print_matrix(n_matrix.matrix, n, n);*/
 
 	//случайно сгенерированная матрица
-	/*const int n = 20;
+	/*const int n = 10;
 	numbered_matrix<float> n_matrix;
-	srand(0);
-	n_matrix.matrix = generateFlatGraph(n);*/
 
-	/*n_matrix.out_indexes = generateIndexList(n);
+	srand(44); //  <----------  ВАРИАНТЫ ГРАФОВ
+
+	n_matrix.matrix = generateFlatGraph(n);
+
+	n_matrix.out_indexes = generateIndexList(n);
 	n_matrix.in_indexes = generateIndexList(n);
 
 	print_numbered_matrix(n_matrix);
 
-	vector<int> path = traveling_saleman_problem_solution_alg_little(n_matrix);
+	vector<int> path_acc = traveling_saleman_problem_solution_alg_little(n_matrix);
 
-	float val = path_len(path, n_matrix.matrix);
-
-	for (int i = 0; i < path.size(); i++) {
-		cout << path[i] << ' ';
+	float val_acc = path_len(path_acc, n_matrix.matrix);
+	cout << "Accuracy branch and bound method" << endl;
+	for (int i = 0; i < path_acc.size(); i++) {
+		cout << path_acc[i] << ' ';
 	}
 	cout << endl;
-	cout << "val: " << val;*/
-
-	//тестирование get_cycle
-	/*vector<int*> test_cycle_edges;
-
-	int* test_edges_1 = new int[2] { 1, 0 };
-	int* test_edges_2 = new int[2] { 1, 2 };
-	int* test_edges_3 = new int[2] { 0, 2 };
+	cout << "val: " << val_acc << endl;
 
 
-	test_cycle_edges.push_back(test_edges_1);
-	test_cycle_edges.push_back(test_edges_2);
-	test_cycle_edges.push_back(test_edges_3);
-
-	vector<int> cycle_path = get_cycle(test_cycle_edges, false);
-
-	for (int i = 0; i < cycle_path.size(); i++) {
-		cout << cycle_path[i] << " ";
+	cout << "Approximate minimum spanning tree method" << endl;
+	vector<int*> minimal_spanning_tree = get_graph_spanning_tree(n_matrix.matrix, n);
+	vector<int> path_apr = traveling_saleman_problem_solution_approximate_alg(minimal_spanning_tree, n);
+	for (int i = 0; i < path_apr.size(); i++) {
+		cout << path_apr[i] << " ";
 	}
-	cout << endl;*/
+	cout << endl;
 
-	get_graph_skeleton(n_matrix.matrix, n);
-	/*vector<int*> test_graph;
-	test_graph.push_back(new int[2]{ 1, 0 });
-	test_graph.push_back(new int[2]{ 1, 2 });
-	test_graph.push_back(new int[2]{ 3, 2 });
-	test_graph.push_back(new int[2]{ 3, 1 });
+	float val_apr = path_len(path_apr, n_matrix.matrix);
+	cout << "val: " << val_apr << endl;*/
 
-	vector<int> p = get_path(test_graph, 3, 0, false);
+	srand(0); //  <----------  ВАРИАНТЫ ГРАФОВ
 
-	for (int i = 0; i < p.size(); i++) {
-		cout << p[i] << " ";
-	}
-	cout << endl;*/
+	cout << "Accuracy branch and bound method" << endl << endl;
+	branch_and_bound_method_test(5);
+	branch_and_bound_method_test(10);
+	branch_and_bound_method_test(20);
+	
+	cout << "Approximate minimum spanning tree method" << endl;
+	minimum_spanning_tree_method_test(50);
+	minimum_spanning_tree_method_test(100);
+	minimum_spanning_tree_method_test(500);
+
+	traveling_saleman_problem_algs_test(40, 12);
 
 	system("pause");
 }
