@@ -769,13 +769,11 @@ void traveling_saleman_problem_algs_test(int test_number, int vertexes_number) {
 
 }
 
-int main()
-{
-
-	//матрица из файла input.txt - несимметричная (только для метода ветвей и границ)
-	/*const int n = 5;
+void matrix_from_file() {
+	
 	numbered_matrix<int> n_matrix;
 	n_matrix.matrix = matrix_from_file<int>("input.txt");
+	int n = n_matrix.out_indexes.size();
 	print_matrix(n_matrix.matrix, n, n);*/
 
 	//случайно сгенерированная матрица
@@ -812,6 +810,28 @@ int main()
 
 	float val_apr = path_len(path_apr, n_matrix.matrix);
 	cout << "val: " << val_apr << endl;*/
+}
+
+void program_menu() {
+	cout << "1 Решение задачи для матрицы смежности из файла input.txt (точный метод)" << endl;
+	cout << "2 Решение задачи для матрицы смежности случайно сгенерированного графа (точный и приближённый методы)" << endl;
+	cout << "3 Тестирование методов" << endl;
+	cout << "4 Выход" << endl;
+	cout << endl;
+
+	int sel = 0;
+	cout << "Введите номер пункта меню программы:" << endl;
+	cin >> sel;
+	
+	switch (sel) {
+	case 1 : 
+	}
+}
+
+int main()
+{
+
+	
 
 	srand(0); //  <----------  ВАРИАНТЫ ГРАФОВ
 
