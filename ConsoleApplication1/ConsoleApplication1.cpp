@@ -223,7 +223,7 @@ Type max_zero_degree_null(numbered_matrix<Type> n_matrix, int* pos) {
 }
 
 template <class Type>
-Type** matrix_from_file(string path) {
+Type** matrix_from_file(string path, int* n) {
 	ifstream in(path);
 	string line;
 	vector<vector<Type>> matrix_lines;
@@ -256,6 +256,7 @@ Type** matrix_from_file(string path) {
 				matrix[i][j] = matrix_lines.at(i).at(j);
 			}
 		}
+		*n = matrix_lines.size();
 		return matrix;
 	}
 	return NULL;
@@ -703,7 +704,7 @@ void branch_and_bound_method_test(int n) {
 	double seconds;
 	clock_t start, end;
 	numbered_matrix<float> n_matrix;
-	cout << n << " vertexes" << endl;
+	cout << n << " вершин" << endl;
 	n_matrix.matrix = generateFlatGraph(n);
 	n_matrix.out_indexes = generateIndexList(n);
 	n_matrix.in_indexes = generateIndexList(n);
@@ -711,8 +712,8 @@ void branch_and_bound_method_test(int n) {
 	path = traveling_saleman_problem_solution_alg_little(n_matrix);
 	end = clock();
 	seconds = (double)(end - start) / CLOCKS_PER_SEC;
-	cout << "Time: " << seconds << " seconds" << endl;
-	cout << "Route weight: " << path_len(path, n_matrix.matrix) << endl;
+	cout << "Время: " << seconds << " секунд" << endl;
+	cout << "Вес маршрута: " << path_len(path, n_matrix.matrix) << endl;
 	cout << endl;
 }
 
@@ -722,16 +723,16 @@ void  minimum_spanning_tree_method_test(int n) {
 	clock_t start, end;
 	float** matrix;
 	vector<int*> minimal_spanning_tree;
-	cout << n << " vertexes" << endl;
+	cout << n << " вершин" << endl;
 	matrix = generateFlatGraph(n);
 	start = clock();
 	minimal_spanning_tree = get_graph_spanning_tree(matrix, n);
 	path = traveling_saleman_problem_solution_approximate_alg(minimal_spanning_tree, n);
 	end = clock();
 	seconds = (double)(end - start) / CLOCKS_PER_SEC;
-	cout << "Time: " << seconds << " seconds" << endl;
-	cout << "Spanning tree weight: " << path_len(minimal_spanning_tree, matrix) << endl;
-	cout << "Route weight: " << path_len(path, matrix) << endl;
+	cout << "Время: " << seconds << " секунд" << endl;
+	cout << "Вес остовного дерева: " << path_len(minimal_spanning_tree, matrix) << endl;
+	cout << "Вес маршрута: " << path_len(path, matrix) << endl;
 	cout << endl;
 }
 
@@ -762,57 +763,13 @@ void traveling_saleman_problem_algs_test(int test_number, int vertexes_number) {
 		approximate_method_time += end - start;
 		aprx_method_weight_sum += path_len(path, n_matrix.matrix);
 	}
-	cout << "Average for " << test_number << " test on " << vertexes_number << "-vertexes graphs:" <<  endl;
-	cout << "Accuracy method time: " << (double) accuracy_method_time / CLOCKS_PER_SEC << " seconds" << endl;
-	cout << "Approximate method time: " << (double)approximate_method_time / CLOCKS_PER_SEC << " seconds" << endl;
-	cout << "Approximate method accuracy: " << (double)acc_method_weight_sum / aprx_method_weight_sum << endl;
-
+	cout << "Средние показатели " << test_number << " тестов на " << vertexes_number << "-вершинных графах:" <<  endl;
+	cout << "Время работы метода ветвей и границ: " << (double) accuracy_method_time / CLOCKS_PER_SEC << " seconds" << endl;
+	cout << "Время работы метода на основе остовного дерева: " << (double)approximate_method_time / CLOCKS_PER_SEC << " seconds" << endl;
+	cout << "Точность метода на основе остовного дерева: " << (double)acc_method_weight_sum / aprx_method_weight_sum << endl;
 }
 
-void matrix_from_file() {
-	
-	numbered_matrix<int> n_matrix;
-	n_matrix.matrix = matrix_from_file<int>("input.txt");
-	int n = n_matrix.out_indexes.size();
-	print_matrix(n_matrix.matrix, n, n);*/
-
-	//случайно сгенерированная матрица
-	/*const int n = 10;
-	numbered_matrix<float> n_matrix;
-
-	srand(44); //  <----------  ВАРИАНТЫ ГРАФОВ
-
-	n_matrix.matrix = generateFlatGraph(n);
-
-	n_matrix.out_indexes = generateIndexList(n);
-	n_matrix.in_indexes = generateIndexList(n);
-
-	print_numbered_matrix(n_matrix);
-
-	vector<int> path_acc = traveling_saleman_problem_solution_alg_little(n_matrix);
-
-	float val_acc = path_len(path_acc, n_matrix.matrix);
-	cout << "Accuracy branch and bound method" << endl;
-	for (int i = 0; i < path_acc.size(); i++) {
-		cout << path_acc[i] << ' ';
-	}
-	cout << endl;
-	cout << "val: " << val_acc << endl;
-
-
-	cout << "Approximate minimum spanning tree method" << endl;
-	vector<int*> minimal_spanning_tree = get_graph_spanning_tree(n_matrix.matrix, n);
-	vector<int> path_apr = traveling_saleman_problem_solution_approximate_alg(minimal_spanning_tree, n);
-	for (int i = 0; i < path_apr.size(); i++) {
-		cout << path_apr[i] << " ";
-	}
-	cout << endl;
-
-	float val_apr = path_len(path_apr, n_matrix.matrix);
-	cout << "val: " << val_apr << endl;*/
-}
-
-void program_menu() {
+int program_menu() {
 	cout << "1 Решение задачи для матрицы смежности из файла input.txt (точный метод)" << endl;
 	cout << "2 Решение задачи для матрицы смежности случайно сгенерированного графа (точный и приближённый методы)" << endl;
 	cout << "3 Тестирование методов" << endl;
@@ -820,33 +777,82 @@ void program_menu() {
 	cout << endl;
 
 	int sel = 0;
-	cout << "Введите номер пункта меню программы:" << endl;
-	cin >> sel;
-	
-	switch (sel) {
-	case 1 : 
+	do {
+		cout << "Введите номер пункта меню программы (1-4):";
+		cin >> sel;
+		cout << endl;
+	} while (!(1 <= sel <= 4));
+
+	return sel;
+}
+
+void test_matrix_from_file() {
+	numbered_matrix<int> n_matrix;
+	int n = 0;
+	n_matrix.matrix = matrix_from_file<int>("C:\\input.txt", &n);
+	print_matrix(n_matrix.matrix, n, n);
+	cout << endl;
+	n_matrix.out_indexes = generateIndexList(n);
+	n_matrix.in_indexes = generateIndexList(n);
+
+	vector<int> path = traveling_saleman_problem_solution_alg_little(n_matrix);
+	cout << "Маршрут: ";
+	for (int i = 0; i < path.size(); i++) {
+		cout << path[i] << " ";
 	}
+	cout << endl;
+	cout << "Вес маршрута: " << path_len(path, n_matrix.matrix);
+	cout << endl;
+	
 }
 
 int main()
 {
+	setlocale(LC_ALL, "Russian");
+	int sel = 4;
+	while ((sel = program_menu()) != 4) {
+		switch (sel) {
+		case 1:
+			test_matrix_from_file();
+			break;
 
+		case 2:
+			cout << "Метод ветвей и границ" << endl << endl;
+			branch_and_bound_method_test(5);
+			branch_and_bound_method_test(10);
+			branch_and_bound_method_test(20);
+
+			cout << "Приближённый метод на основе остовного дерева" << endl;
+			minimum_spanning_tree_method_test(50);
+			minimum_spanning_tree_method_test(100);
+			minimum_spanning_tree_method_test(500);
+
+			
+			break;
+
+		case 3:
+			traveling_saleman_problem_algs_test(40, 12);
+			break;
+		}
+		cout << endl;
+		system("pause");
+		system("cls");
+	}
 	
 
-	srand(0); //  <----------  ВАРИАНТЫ ГРАФОВ
+	//srand(0); //  <----------  ВАРИАНТЫ ГРАФОВ
 
-	cout << "Accuracy branch and bound method" << endl << endl;
-	branch_and_bound_method_test(5);
-	branch_and_bound_method_test(10);
-	branch_and_bound_method_test(20);
-	
-	cout << "Approximate minimum spanning tree method" << endl;
-	minimum_spanning_tree_method_test(50);
-	minimum_spanning_tree_method_test(100);
-	minimum_spanning_tree_method_test(500);
+	//cout << "Accuracy branch and bound method" << endl << endl;
+	//branch_and_bound_method_test(5);
+	//branch_and_bound_method_test(10);
+	//branch_and_bound_method_test(20);
+	//
+	//cout << "Approximate minimum spanning tree method" << endl;
+	//minimum_spanning_tree_method_test(50);
+	//minimum_spanning_tree_method_test(100);
+	//minimum_spanning_tree_method_test(500);
 
-	traveling_saleman_problem_algs_test(40, 12);
+	//traveling_saleman_problem_algs_test(40, 12);
 
-	system("pause");
 }
 
